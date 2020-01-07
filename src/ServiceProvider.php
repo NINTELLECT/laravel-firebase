@@ -4,22 +4,33 @@ declare(strict_types=1);
 
 namespace Kreait\Laravel\Firebase;
 
-use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\Foundation\Application as LaravelApplication;
+use Laravel\Lumen\Application as LumenApplication;
 use Kreait\Firebase;
 
 final class ServiceProvider extends \Illuminate\Support\ServiceProvider
 {
     public function boot()
     {
-        if ($this->app->runningInConsole()) {
-            $this->publishes([
-                __DIR__ . '/../config/firebase.php' => $this->app->configPath('firebase.php'),
-            ], 'config');
+        if (!$this->app->runningInConsole()) {
+            return;
         }
+
+        if ($this->app instanceof LumenApplication) {
+            return;
+        }
+
+        $this->publishes([
+            __DIR__ . '/../config/firebase.php' => $this->app->configPath('firebase.php'),
+        ], 'config');
     }
 
     public function register()
     {
+        if ($this->app instanceof LumenApplication) {
+            $this->app->configure('firebase');
+        }
+
         $this->mergeConfigFrom(__DIR__.'/../config/firebase.php', 'firebase');
 
         $this->registerComponents();
@@ -27,7 +38,8 @@ final class ServiceProvider extends \Illuminate\Support\ServiceProvider
 
     private function registerComponents()
     {
-        $this->app->singleton(Firebase\Factory::class, static function (Application $app) {
+        $this->app->singleton(Firebase\Factory::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             $factory = new Firebase\Factory();
 
             $config = $app->make('config')['firebase'];
@@ -58,39 +70,46 @@ final class ServiceProvider extends \Illuminate\Support\ServiceProvider
             return $factory;
         });
 
-        $this->app->singleton(Firebase\Auth::class, static function (Application $app) {
+        $this->app->singleton(Firebase\Auth::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             return $app->make(Firebase\Factory::class)->createAuth();
         });
         $this->app->alias(Firebase\Auth::class, 'firebase.auth');
 
-        $this->app->singleton(Firebase\Database::class, static function (Application $app) {
+        $this->app->singleton(Firebase\Database::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             return $app->make(Firebase\Factory::class)->createDatabase();
         });
         $this->app->alias(Firebase\Database::class, 'firebase.database');
 
-        $this->app->singleton(Firebase\DynamicLinks::class, static function (Application $app) {
+        $this->app->singleton(Firebase\DynamicLinks::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             $defaultDynamicLinksDomain = $app->make('config')['firebase']['dynamic_links']['default_domain'] ?? null;
 
             return $app->make(Firebase\Factory::class)->createDynamicLinksService($defaultDynamicLinksDomain);
         });
         $this->app->alias(Firebase\DynamicLinks::class, 'firebase.dynamic_links');
 
-        $this->app->singleton(Firebase\Firestore::class, static function (Application $app) {
+        $this->app->singleton(Firebase\Firestore::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             return $app->make(Firebase\Factory::class)->createFirestore();
         });
         $this->app->alias(Firebase\Firestore::class, 'firebase.firestore');
 
-        $this->app->singleton(Firebase\Messaging::class, static function (Application $app) {
+        $this->app->singleton(Firebase\Messaging::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             return $app->make(Firebase\Factory::class)->createMessaging();
         });
         $this->app->alias(Firebase\Messaging::class, 'firebase.messaging');
 
-        $this->app->singleton(Firebase\RemoteConfig::class, static function (Application $app) {
+        $this->app->singleton(Firebase\RemoteConfig::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             return $app->make(Firebase\Factory::class)->createRemoteConfig();
         });
         $this->app->alias(Firebase\RemoteConfig::class, 'firebase.remote_config');
 
-        $this->app->singleton(Firebase\Storage::class, static function (Application $app) {
+        $this->app->singleton(Firebase\Storage::class, static function ($app) {
+            /** @var LaravelApplication|LumenApplication $app */
             return $app->make(Firebase\Factory::class)->createStorage();
         });
         $this->app->alias(Firebase\Storage::class, 'firebase.storage');
